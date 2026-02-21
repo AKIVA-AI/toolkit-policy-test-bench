@@ -1,0 +1,13 @@
+﻿version: '3.8'
+services:
+  policy-test:
+    build: .
+    container_name: toolkit-policy-test
+    volumes:
+      - ./policies:/app/policies
+      - ./results:/app/results
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    command: tail -f /dev/null
+
+
