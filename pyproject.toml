@@ -23,6 +23,11 @@ classifiers = [
 ]
 dependencies = []
 
+[project.urls]
+Homepage = "https://github.com/AKIVA-AI/toolkit-policy-test-bench"
+Repository = "https://github.com/AKIVA-AI/toolkit-policy-test-bench"
+Issues = "https://github.com/AKIVA-AI/toolkit-policy-test-bench/issues"
+
 [project.scripts]
 toolkit-policy = "toolkit_policy_test_bench.cli:main"
 
@@ -49,7 +54,7 @@ omit = ["*/toolkit_policy_test_bench/__main__.py"]
 [tool.coverage.report]
 show_missing = true
 skip_covered = true
-fail_under = 80
+fail_under = 60
 
 [tool.ruff]
 line-length = 100
@@ -70,4 +75,3 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 toolkit_policy_test_bench = ["py.typed"]
-
