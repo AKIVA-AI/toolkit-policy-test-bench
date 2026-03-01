@@ -21,7 +21,9 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Typing :: Typed",
 ]
-dependencies = []
+dependencies = [
+  "asyncpg>=0.29.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/AKIVA-AI/toolkit-policy-test-bench"
