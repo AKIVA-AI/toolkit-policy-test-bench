@@ -343,15 +343,26 @@ def build_parser() -> argparse.ArgumentParser:
     compare = sub.add_parser("compare", help="Compare candidate report against baseline report.")
     compare.add_argument("--baseline", required=True, help="Baseline report JSON file path")
     compare.add_argument("--candidate", required=True, help="Candidate report JSON file path")
-    compare.add_argument("--max-fail-rate-increase-pct", default="0.0", help="Max fail rate increase %% (default: 0.0)")
-    compare.add_argument("--max-pii-hits-increase", default="0", help="Max PII hits increase (default: 0)")
-    compare.add_argument("--max-secret-hits-increase", default="0", help="Max secret hits increase (default: 0)")
+    compare.add_argument(
+        "--max-fail-rate-increase-pct", default="0.0",
+        help="Max fail rate increase %% (default: 0.0)",
+    )
+    compare.add_argument(
+        "--max-pii-hits-increase", default="0",
+        help="Max PII hits increase (default: 0)",
+    )
+    compare.add_argument(
+        "--max-secret-hits-increase", default="0",
+        help="Max secret hits increase (default: 0)",
+    )
     compare.set_defaults(func=_cmd_compare)
 
     validate_report = sub.add_parser(
         "validate-report", help="Validate a policy report JSON has the expected shape."
     )
-    validate_report.add_argument("--report", required=True, help="Report JSON file path to validate")
+    validate_report.add_argument(
+        "--report", required=True, help="Report JSON file path to validate",
+    )
     validate_report.set_defaults(func=_cmd_validate_report)
 
     return p
