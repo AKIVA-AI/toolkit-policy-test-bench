@@ -1,51 +1,42 @@
-﻿# Policy Test Bench - Deployment Guide
+# Policy Test Bench - Deployment Guide
 
-## ðŸš€ Quick Start
+## Quick Start
 
 ### Docker Deployment (Recommended)
 
 ```bash
-cd policy-test-bench
 docker-compose up -d
-docker-compose exec policy-test toolkit-policy-test run --policy policies/my-policy.json
+docker-compose exec policy-test toolkit-policy run --suite /app/policies/suite.zip --predictions /app/policies/preds.jsonl
 ```
 
 ### Local Installation
 
 ```bash
 pip install -e ".[dev]"
-toolkit-policy-test --version
+toolkit-policy --version
 pytest
 ```
 
-## ðŸ”§ Configuration
+## Configuration
 
 See `.env.example` for all options.
 
 **Key Settings:**
-- `STRICT_MODE`: Enable strict policy enforcement
-- `ENABLE_AUDIT_LOG`: Enable audit logging
 
-## ðŸ“Š Production Deployment
+- `LOG_LEVEL`: Logging verbosity (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+
+## Production Deployment
 
 ### CI/CD Integration
 
 ```yaml
-- name: Test Policy Compliance
-  run: toolkit-policy-test run --policy $POLICY_FILE
+- name: Run Policy Suite
+  run: toolkit-policy run --suite $SUITE_PATH --predictions $PREDICTIONS_PATH --out report.json
+
+- name: Compare Against Baseline
+  run: toolkit-policy compare --baseline baseline.json --candidate report.json
 ```
 
-### Monitoring
-
-```python
-from toolkit_policy_test.monitoring import get_health_status
-status = get_health_status()
-```
-
-## ðŸ“ž Support
+## Support
 
 - Documentation: [README.md](README.md)
-- Support: <support-email>
-
-
-

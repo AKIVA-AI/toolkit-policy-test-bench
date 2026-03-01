@@ -1,33 +1,27 @@
-﻿# Policy Test Bench - Quick Start
+# Policy Test Bench - Quick Start
 
-## ðŸš€ Installation
+## Installation
 
 ```bash
 pip install -e ".[dev]"
-toolkit-policy-test --version
+toolkit-policy --version
 ```
 
-## ðŸ“ Basic Usage
+## Basic Usage
 
 ```bash
-# Test policy compliance
-toolkit-policy-test run --policy policies/my-policy.json --out results.json
+# Run a policy suite against predictions
+toolkit-policy run --suite packs/policy.zip --predictions examples/preds.jsonl --out results.json
 ```
 
-## ðŸ³ Docker Usage
+## Docker Usage
 
 ```bash
 docker-compose up -d
-docker-compose exec policy-test toolkit-policy-test run --policy /app/policies/my-policy.json
+docker-compose exec policy-test toolkit-policy run --suite /app/policies/suite.zip --predictions /app/policies/preds.jsonl
 ```
 
-## ðŸ“š Next Steps
+## Next Steps
 
 - Read [README.md](README.md)
 - Check [DEPLOYMENT.md](DEPLOYMENT.md)
-
----
-
-**Ready to test AI policies!** ðŸš€
-
-
