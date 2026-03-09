@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import pytest
 
@@ -47,4 +47,3 @@ def test_validate_json() -> None:
     ok2, reasons2 = validate_json({"b": 2}, schema)
     assert ok2 is False
     assert "missing_key:a" in reasons2
-

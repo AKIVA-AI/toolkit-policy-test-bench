@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 from pathlib import Path
@@ -83,4 +83,3 @@ def test_pack_run_and_compare(tmp_path: Path) -> None:
         ),
     )
     assert result["passed"] is False
-

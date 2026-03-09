@@ -98,9 +98,7 @@ def _safe_extract(zf: zipfile.ZipFile, target_dir: Path) -> None:
         try:
             member_path.relative_to(target)
         except ValueError:
-            raise ValueError(
-                f"Zip member escapes target directory: {member.filename}"
-            )
+            raise ValueError(f"Zip member escapes target directory: {member.filename}") from None
     # All members validated — now extract
     zf.extractall(target_dir)
 

@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import argparse
 import json
@@ -8,8 +8,8 @@ import time
 from pathlib import Path
 
 from . import __version__
-from .formatting import format_output
 from .compare import CompareBudget, compare_reports
+from .formatting import format_output
 from .io import read_bytes, read_json, read_text, write_json, write_text
 from .pack import create_pack, load_suite_from_path, verify_pack
 from .report import PolicyReport, write_report_json
@@ -44,9 +44,9 @@ def _cmd_pack_create(args: argparse.Namespace) -> int:
     """Create a suite pack zip from a suite directory."""
     suite_dir = Path(args.suite_dir).resolve()
     out = Path(args.out).resolve()
-    
+
     logger.info(f"Creating pack from: {suite_dir}")
-    
+
     try:
         create_pack(suite_dir=suite_dir, out_zip=out)
         print(str(out))
@@ -61,7 +61,7 @@ def _cmd_pack_inspect(args: argparse.Namespace) -> int:
     """Inspect a suite (dir or zip)."""
     suite_path = Path(args.suite).resolve()
     logger.info(f"Inspecting suite: {suite_path}")
-    
+
     try:
         suite = load_suite_from_path(suite_path)
         print(json.dumps(suite.to_dict(), indent=2, sort_keys=True))
@@ -76,12 +76,12 @@ def _cmd_pack_verify(args: argparse.Namespace) -> int:
     """Verify pack integrity (hashes)."""
     pack_path = Path(args.suite).resolve()
     logger.info(f"Verifying pack: {pack_path}")
-    
+
     try:
         res = verify_pack(pack_zip=pack_path)
         ok = bool(res.get("ok"))
         print(json.dumps(res, indent=2, sort_keys=True))
-        
+
         if ok:
             logger.info("Pack verification passed")
             return EXIT_SUCCESS
@@ -98,14 +98,14 @@ def _cmd_keygen(args: argparse.Namespace) -> int:
     private_key_path = Path(args.private_key).resolve()
     public_key_path = Path(args.public_key).resolve()
     logger.info("Generating Ed25519 keypair...")
-    
+
     try:
         kp = generate_ed25519_keypair()
         logger.info("Keypair generated successfully")
     except Exception as e:
         logger.error(f"Failed to generate keypair: {e}")
         return EXIT_CLI_ERROR
-    
+
     try:
         write_text(private_key_path, kp.private_key_pem)
         logger.info(f"Wrote private key to: {private_key_path}")
@@ -122,30 +122,30 @@ def _cmd_pack_sign(args: argparse.Namespace) -> int:
     pack_path = Path(args.suite).resolve()
     private_key_path = Path(args.private_key).resolve()
     logger.info(f"Signing pack: {pack_path}")
-    
+
     try:
         payload = read_bytes(pack_path)
         logger.debug("Pack loaded successfully")
     except (FileNotFoundError, PermissionError) as e:
         logger.error(f"Failed to read pack: {e}")
         return EXIT_CLI_ERROR
-    
+
     try:
         private_pem = read_text(private_key_path)
         logger.debug("Private key loaded")
     except (FileNotFoundError, PermissionError) as e:
         logger.error(f"Failed to read private key: {e}")
         return EXIT_CLI_ERROR
-    
+
     try:
         sig = sign_bytes(payload=payload, private_key_pem=private_pem)
         logger.info("Pack signed successfully")
     except Exception as e:
         logger.error(f"Failed to sign pack: {e}")
         return EXIT_CLI_ERROR
-    
+
     sig_obj = {"algorithm": "ed25519", "signature_b64": sig}
-    
+
     try:
         if args.out:
             write_json(Path(args.out), sig_obj)
@@ -163,7 +163,7 @@ def _cmd_pack_verify_sig(args: argparse.Namespace) -> int:
     signature_path = Path(args.signature).resolve()
     public_key_path = Path(args.public_key).resolve()
     logger.info(f"Verifying signature for: {pack_path}")
-    
+
     try:
         sig_obj = read_json(signature_path)
         if not isinstance(sig_obj, dict):
@@ -172,23 +172,23 @@ def _cmd_pack_verify_sig(args: argparse.Namespace) -> int:
     except (ValueError, FileNotFoundError, PermissionError) as e:
         logger.error(f"Failed to read signature: {e}")
         return EXIT_CLI_ERROR
-    
+
     try:
         public_pem = read_text(public_key_path)
         logger.debug("Public key loaded")
     except (FileNotFoundError, PermissionError) as e:
         logger.error(f"Failed to read public key: {e}")
         return EXIT_CLI_ERROR
-    
+
     try:
         payload = read_bytes(pack_path)
         ok = verify_bytes(payload=payload, signature_b64=sig_b64, public_key_pem=public_pem)
-        
+
         if ok:
             logger.info("Signature verified successfully")
         else:
             logger.warning("Signature verification failed")
-            
+
         print(json.dumps({"ok": ok}, indent=2, sort_keys=True))
         return EXIT_SUCCESS if ok else EXIT_VALIDATION_FAILED
     except (FileNotFoundError, PermissionError, Exception) as e:
@@ -202,21 +202,21 @@ def _cmd_run(args: argparse.Namespace) -> int:
     predictions_path = Path(args.predictions).resolve()
     logger.info(f"Running suite: {suite_path}")
     logger.debug(f"Predictions: {predictions_path}")
-    
+
     try:
         suite = load_suite_from_path(suite_path)
         logger.info(f"Loaded suite: {suite.name}")
     except (ValueError, FileNotFoundError, PermissionError) as e:
         logger.error(f"Failed to load suite: {e}")
         return EXIT_CLI_ERROR
-    
+
     try:
         report = run_suite(suite=suite, predictions_path=predictions_path)
         logger.info("Suite run completed")
     except (ValueError, FileNotFoundError, PermissionError) as e:
         logger.error(f"Failed to run suite: {e}")
         return EXIT_CLI_ERROR
-    
+
     if args.out:
         out = Path(args.out).resolve()
         try:
@@ -225,7 +225,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
         except (OSError, PermissionError) as e:
             logger.error(f"Failed to write report: {e}")
             return EXIT_CLI_ERROR
-    
+
     out_fmt = getattr(args, "format", "json")
     print(format_output(report.to_dict(), out_fmt))
     return EXIT_SUCCESS
@@ -238,7 +238,7 @@ def _cmd_compare(args: argparse.Namespace) -> int:
     logger.info("Comparing reports")
     logger.debug(f"Baseline: {baseline_path}")
     logger.debug(f"Candidate: {candidate_path}")
-    
+
     try:
         baseline_obj = read_json(baseline_path)
         baseline = PolicyReport.from_dict(baseline_obj)
@@ -246,7 +246,7 @@ def _cmd_compare(args: argparse.Namespace) -> int:
     except (ValueError, FileNotFoundError, PermissionError) as e:
         logger.error(f"Failed to read baseline: {e}")
         return EXIT_CLI_ERROR
-    
+
     try:
         candidate_obj = read_json(candidate_path)
         candidate = PolicyReport.from_dict(candidate_obj)
@@ -254,7 +254,7 @@ def _cmd_compare(args: argparse.Namespace) -> int:
     except (ValueError, FileNotFoundError, PermissionError) as e:
         logger.error(f"Failed to read candidate: {e}")
         return EXIT_CLI_ERROR
-    
+
     try:
         budget = CompareBudget(
             max_fail_rate_increase_pct=float(args.max_fail_rate_increase_pct),
@@ -262,12 +262,12 @@ def _cmd_compare(args: argparse.Namespace) -> int:
             max_secret_hits_increase=int(args.max_secret_hits_increase),
         )
         result = compare_reports(baseline=baseline, candidate=candidate, budget=budget)
-        
+
         if result["passed"]:
             logger.info("Comparison passed")
         else:
             logger.warning("Comparison failed")
-            
+
         out_fmt = getattr(args, "format", "json")
         print(format_output(result, out_fmt))
         return EXIT_SUCCESS if result["passed"] else EXIT_VALIDATION_FAILED
@@ -280,25 +280,25 @@ def _cmd_validate_report(args: argparse.Namespace) -> int:
     """Validate a policy report JSON has the expected shape."""
     report_path = Path(args.report).resolve()
     logger.info(f"Validating report: {report_path}")
-    
+
     try:
         obj = read_json(report_path)
     except (ValueError, FileNotFoundError, PermissionError) as e:
         logger.error(f"Failed to read report: {e}")
         return EXIT_CLI_ERROR
-    
+
     ok = (
         isinstance(obj, dict)
         and isinstance(obj.get("suite"), dict)
         and isinstance(obj.get("summary"), dict)
         and isinstance(obj.get("cases"), list)
     )
-    
+
     if ok:
         logger.info("Report validation passed")
     else:
         logger.warning("Report validation failed")
-    
+
     payload = {"ok": ok, "schema": "toolkit_policy_report", "schema_version": 1}
     print(json.dumps(payload, indent=2, sort_keys=True))
     return EXIT_SUCCESS if ok else EXIT_VALIDATION_FAILED
@@ -364,23 +364,30 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--suite", required=True, help="Suite path (directory or zip)")
     run.add_argument("--predictions", required=True, help="Predictions JSONL (id+prediction)")
     run.add_argument("--out", default="", help="Optional output report JSON path")
-    run.add_argument("--format", choices=["json", "table"], default="json", help="Output format (default: json)")
+    run.add_argument(
+        "--format", choices=["json", "table"], default="json", help="Output format (default: json)"
+    )
     run.set_defaults(func=_cmd_run)
 
     compare = sub.add_parser("compare", help="Compare candidate report against baseline report.")
     compare.add_argument("--baseline", required=True, help="Baseline report JSON file path")
     compare.add_argument("--candidate", required=True, help="Candidate report JSON file path")
-    compare.add_argument("--format", choices=["json", "table"], default="json", help="Output format (default: json)")
     compare.add_argument(
-        "--max-fail-rate-increase-pct", default="0.0",
+        "--format", choices=["json", "table"], default="json", help="Output format (default: json)"
+    )
+    compare.add_argument(
+        "--max-fail-rate-increase-pct",
+        default="0.0",
         help="Max fail rate increase %% (default: 0.0)",
     )
     compare.add_argument(
-        "--max-pii-hits-increase", default="0",
+        "--max-pii-hits-increase",
+        default="0",
         help="Max PII hits increase (default: 0)",
     )
     compare.add_argument(
-        "--max-secret-hits-increase", default="0",
+        "--max-secret-hits-increase",
+        default="0",
         help="Max secret hits increase (default: 0)",
     )
     compare.set_defaults(func=_cmd_compare)
@@ -389,7 +396,9 @@ def build_parser() -> argparse.ArgumentParser:
         "validate-report", help="Validate a policy report JSON has the expected shape."
     )
     validate_report.add_argument(
-        "--report", required=True, help="Report JSON file path to validate",
+        "--report",
+        required=True,
+        help="Report JSON file path to validate",
     )
     validate_report.set_defaults(func=_cmd_validate_report)
 
@@ -398,28 +407,30 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     """Main entry point for CLI.
-    
+
     Args:
         argv: Command line arguments (defaults to sys.argv)
-        
+
     Returns:
         Exit code (0 = success, non-zero = error)
     """
     parser = build_parser()
     args = parser.parse_args(argv)
-    
+
     log_level = logging.DEBUG if args.verbose else logging.WARNING
     handler = logging.StreamHandler(sys.stderr)
     handler.setLevel(log_level)
     if args.log_format == "json":
         handler.setFormatter(_JSONLogFormatter())
     else:
-        handler.setFormatter(logging.Formatter(
-            fmt="%(asctime)s | %(levelname)-8s | %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-        ))
+        handler.setFormatter(
+            logging.Formatter(
+                fmt="%(asctime)s | %(levelname)-8s | %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S",
+            )
+        )
     logging.basicConfig(level=log_level, handlers=[handler])
-    
+
     try:
         return int(args.func(args))
     except (ValueError, FileNotFoundError, PermissionError) as e:
@@ -435,5 +446,3 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return EXIT_UNEXPECTED_ERROR
-
-

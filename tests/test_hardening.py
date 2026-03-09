@@ -9,11 +9,9 @@ from pathlib import Path
 import pytest
 
 from toolkit_policy_test_bench.cli import (
-    EXIT_CLI_ERROR,
     EXIT_SUCCESS,
     EXIT_VALIDATION_FAILED,
     _JSONLogFormatter,
-    build_parser,
     main,
 )
 from toolkit_policy_test_bench.formatting import format_output
@@ -24,8 +22,6 @@ from toolkit_policy_test_bench.plugins import (
     registry,
 )
 from toolkit_policy_test_bench.runner import run_suite
-from toolkit_policy_test_bench.suite import PolicySuite
-
 
 # ============================================================================
 # Zip-slip prevention tests
@@ -82,10 +78,18 @@ def test_load_suite_from_zip_with_traversal_rejected(tmp_path: Path) -> None:
     malicious_zip = tmp_path / "evil_suite.zip"
     with zipfile.ZipFile(malicious_zip, "w") as zf:
         zf.writestr("../escape.txt", "pwned")
-        zf.writestr("suite.json", json.dumps({
-            "schema_version": 1, "name": "evil", "description": "",
-            "created_at": "", "checks": {},
-        }))
+        zf.writestr(
+            "suite.json",
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "name": "evil",
+                    "description": "",
+                    "created_at": "",
+                    "checks": {},
+                }
+            ),
+        )
         zf.writestr("cases.jsonl", "")
 
     with pytest.raises(ValueError, match="escapes target directory"):
@@ -104,6 +108,7 @@ class TestDetectorRegistry:
     def test_register_and_run_pii(self) -> None:
         def detect_mrn(text: str) -> dict[str, int]:
             import re
+
             return {"mrn": len(re.findall(r"MRN-\d{8}", text))}
 
         self.reg.register(DetectorPlugin(name="mrn", kind="pii", detect=detect_mrn))
@@ -113,6 +118,7 @@ class TestDetectorRegistry:
     def test_register_and_run_secrets(self) -> None:
         def detect_github(text: str) -> dict[str, int]:
             import re
+
             return {"github_token": len(re.findall(r"ghp_[A-Za-z0-9]{36}", text))}
 
         self.reg.register(DetectorPlugin(name="github_token", kind="secret", detect=detect_github))
@@ -200,23 +206,34 @@ def test_runner_uses_custom_pii_plugin(tmp_path: Path) -> None:
     """Custom PII detector should be picked up by run_suite."""
     # Set up a temporary custom detector
     import re
+
     from toolkit_policy_test_bench.plugins import registry as r
 
     original = r._detectors.copy()
     try:
         r.clear()
-        r.register(DetectorPlugin(
-            name="custom_id",
-            kind="pii",
-            detect=lambda t: {"custom_id": len(re.findall(r"CID-\d+", t))},
-        ))
+        r.register(
+            DetectorPlugin(
+                name="custom_id",
+                kind="pii",
+                detect=lambda t: {"custom_id": len(re.findall(r"CID-\d+", t))},
+            )
+        )
 
         suite_dir = tmp_path / "suite"
         suite_dir.mkdir()
-        (suite_dir / "suite.json").write_text(json.dumps({
-            "schema_version": 1, "name": "plugin_test", "description": "",
-            "created_at": "", "checks": {"pii": {"enabled": True}},
-        }), encoding="utf-8")
+        (suite_dir / "suite.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "name": "plugin_test",
+                    "description": "",
+                    "created_at": "",
+                    "checks": {"pii": {"enabled": True}},
+                }
+            ),
+            encoding="utf-8",
+        )
         (suite_dir / "cases.jsonl").write_text(
             json.dumps({"id": "c1", "input": "", "tags": []}) + "\n",
             encoding="utf-8",
@@ -229,6 +246,7 @@ def test_runner_uses_custom_pii_plugin(tmp_path: Path) -> None:
         )
 
         from toolkit_policy_test_bench.suite import read_suite_dir
+
         suite = read_suite_dir(suite_dir)
         report = run_suite(suite=suite, predictions_path=preds)
 
@@ -274,8 +292,13 @@ def test_json_log_formatter() -> None:
 
     formatter = _JSONLogFormatter()
     record = logging.LogRecord(
-        name="test", level=logging.WARNING, pathname="test.py",
-        lineno=1, msg="Test message", args=(), exc_info=None,
+        name="test",
+        level=logging.WARNING,
+        pathname="test.py",
+        lineno=1,
+        msg="Test message",
+        args=(),
+        exc_info=None,
     )
     output = formatter.format(record)
     parsed = json.loads(output)
@@ -288,9 +311,16 @@ def test_json_log_formatter() -> None:
 def test_cli_json_log_format(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """--log-format json should not break normal operation."""
     report = tmp_path / "report.json"
-    report.write_text(json.dumps({
-        "suite": {}, "summary": {}, "cases": [],
-    }), encoding="utf-8")
+    report.write_text(
+        json.dumps(
+            {
+                "suite": {},
+                "summary": {},
+                "cases": [],
+            }
+        ),
+        encoding="utf-8",
+    )
 
     rc = main(["--log-format", "json", "validate-report", "--report", str(report)])
     assert rc == EXIT_SUCCESS
@@ -305,10 +335,18 @@ def test_run_format_table(tmp_path: Path, capsys: pytest.CaptureFixture[str]) ->
     """run --format table should produce table output."""
     suite_dir = tmp_path / "suite"
     suite_dir.mkdir()
-    (suite_dir / "suite.json").write_text(json.dumps({
-        "schema_version": 1, "name": "fmt_test", "description": "",
-        "created_at": "", "checks": {},
-    }), encoding="utf-8")
+    (suite_dir / "suite.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "name": "fmt_test",
+                "description": "",
+                "created_at": "",
+                "checks": {},
+            }
+        ),
+        encoding="utf-8",
+    )
     (suite_dir / "cases.jsonl").write_text(
         json.dumps({"id": "c1", "input": "", "tags": []}) + "\n",
         encoding="utf-8",
@@ -316,11 +354,17 @@ def test_run_format_table(tmp_path: Path, capsys: pytest.CaptureFixture[str]) ->
     preds = tmp_path / "preds.jsonl"
     preds.write_text(json.dumps({"id": "c1", "prediction": "ok"}) + "\n", encoding="utf-8")
 
-    rc = main([
-        "run", "--suite", str(suite_dir),
-        "--predictions", str(preds),
-        "--format", "table",
-    ])
+    rc = main(
+        [
+            "run",
+            "--suite",
+            str(suite_dir),
+            "--predictions",
+            str(preds),
+            "--format",
+            "table",
+        ]
+    )
     assert rc == EXIT_SUCCESS
     out = capsys.readouterr().out
     assert "suite" in out
@@ -330,17 +374,36 @@ def test_run_format_table(tmp_path: Path, capsys: pytest.CaptureFixture[str]) ->
 def test_compare_format_table(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """compare --format table should produce table output."""
     for name, data in [
-        ("baseline.json", {"suite": {}, "summary": {"fail_rate": 0, "pii_total_hits": 0, "secret_total_hits": 0}, "cases": []}),
-        ("candidate.json", {"suite": {}, "summary": {"fail_rate": 0, "pii_total_hits": 0, "secret_total_hits": 0}, "cases": []}),
+        (
+            "baseline.json",
+            {
+                "suite": {},
+                "summary": {"fail_rate": 0, "pii_total_hits": 0, "secret_total_hits": 0},
+                "cases": [],
+            },
+        ),
+        (
+            "candidate.json",
+            {
+                "suite": {},
+                "summary": {"fail_rate": 0, "pii_total_hits": 0, "secret_total_hits": 0},
+                "cases": [],
+            },
+        ),
     ]:
         (tmp_path / name).write_text(json.dumps(data), encoding="utf-8")
 
-    rc = main([
-        "compare",
-        "--baseline", str(tmp_path / "baseline.json"),
-        "--candidate", str(tmp_path / "candidate.json"),
-        "--format", "table",
-    ])
+    rc = main(
+        [
+            "compare",
+            "--baseline",
+            str(tmp_path / "baseline.json"),
+            "--candidate",
+            str(tmp_path / "candidate.json"),
+            "--format",
+            "table",
+        ]
+    )
     assert rc == EXIT_SUCCESS
     out = capsys.readouterr().out
     assert "passed" in out
@@ -366,16 +429,25 @@ def test_empty_suite_no_cases(tmp_path: Path) -> None:
     """A suite with zero cases should produce an empty report."""
     suite_dir = tmp_path / "empty_suite"
     suite_dir.mkdir()
-    (suite_dir / "suite.json").write_text(json.dumps({
-        "schema_version": 1, "name": "empty", "description": "",
-        "created_at": "", "checks": {"pii": {"enabled": True}},
-    }), encoding="utf-8")
+    (suite_dir / "suite.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "name": "empty",
+                "description": "",
+                "created_at": "",
+                "checks": {"pii": {"enabled": True}},
+            }
+        ),
+        encoding="utf-8",
+    )
     (suite_dir / "cases.jsonl").write_text("", encoding="utf-8")
 
     preds = tmp_path / "preds.jsonl"
     preds.write_text("", encoding="utf-8")
 
     from toolkit_policy_test_bench.suite import read_suite_dir
+
     suite = read_suite_dir(suite_dir)
     report = run_suite(suite=suite, predictions_path=preds)
 
@@ -389,10 +461,18 @@ def test_missing_prediction_for_case(tmp_path: Path) -> None:
     """Cases without a matching prediction should use empty string."""
     suite_dir = tmp_path / "suite"
     suite_dir.mkdir()
-    (suite_dir / "suite.json").write_text(json.dumps({
-        "schema_version": 1, "name": "missing_pred", "description": "",
-        "created_at": "", "checks": {"must_contain": ["expected"]},
-    }), encoding="utf-8")
+    (suite_dir / "suite.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "name": "missing_pred",
+                "description": "",
+                "created_at": "",
+                "checks": {"must_contain": ["expected"]},
+            }
+        ),
+        encoding="utf-8",
+    )
     (suite_dir / "cases.jsonl").write_text(
         json.dumps({"id": "orphan", "input": "", "tags": []}) + "\n",
         encoding="utf-8",
@@ -402,6 +482,7 @@ def test_missing_prediction_for_case(tmp_path: Path) -> None:
     preds.write_text("", encoding="utf-8")
 
     from toolkit_policy_test_bench.suite import read_suite_dir
+
     suite = read_suite_dir(suite_dir)
     report = run_suite(suite=suite, predictions_path=preds)
 
@@ -413,13 +494,21 @@ def test_concurrent_pii_and_secret_detection(tmp_path: Path) -> None:
     """Both PII and secret detectors should fire on same text."""
     suite_dir = tmp_path / "suite"
     suite_dir.mkdir()
-    (suite_dir / "suite.json").write_text(json.dumps({
-        "schema_version": 1, "name": "both", "description": "",
-        "created_at": "", "checks": {
-            "pii": {"enabled": True},
-            "secrets": {"enabled": True},
-        },
-    }), encoding="utf-8")
+    (suite_dir / "suite.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "name": "both",
+                "description": "",
+                "created_at": "",
+                "checks": {
+                    "pii": {"enabled": True},
+                    "secrets": {"enabled": True},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
     (suite_dir / "cases.jsonl").write_text(
         json.dumps({"id": "c1", "input": "", "tags": []}) + "\n",
         encoding="utf-8",
@@ -428,9 +517,12 @@ def test_concurrent_pii_and_secret_detection(tmp_path: Path) -> None:
     # Text containing both PII (email) and secret (AWS key)
     text_with_both = "Contact user@example.com and use AKIAIOSFODNN7EXAMPLE"
     preds = tmp_path / "preds.jsonl"
-    preds.write_text(json.dumps({"id": "c1", "prediction": text_with_both}) + "\n", encoding="utf-8")
+    preds.write_text(
+        json.dumps({"id": "c1", "prediction": text_with_both}) + "\n", encoding="utf-8"
+    )
 
     from toolkit_policy_test_bench.suite import read_suite_dir
+
     suite = read_suite_dir(suite_dir)
     report = run_suite(suite=suite, predictions_path=preds)
 
@@ -445,10 +537,18 @@ def test_malformed_predictions_jsonl(tmp_path: Path) -> None:
     """Malformed JSONL predictions should raise."""
     suite_dir = tmp_path / "suite"
     suite_dir.mkdir()
-    (suite_dir / "suite.json").write_text(json.dumps({
-        "schema_version": 1, "name": "t", "description": "",
-        "created_at": "", "checks": {},
-    }), encoding="utf-8")
+    (suite_dir / "suite.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "name": "t",
+                "description": "",
+                "created_at": "",
+                "checks": {},
+            }
+        ),
+        encoding="utf-8",
+    )
     (suite_dir / "cases.jsonl").write_text(
         json.dumps({"id": "c1", "input": "", "tags": []}) + "\n",
         encoding="utf-8",
@@ -458,6 +558,7 @@ def test_malformed_predictions_jsonl(tmp_path: Path) -> None:
     preds.write_text("not valid json\n", encoding="utf-8")
 
     from toolkit_policy_test_bench.suite import read_suite_dir
+
     suite = read_suite_dir(suite_dir)
     with pytest.raises(json.JSONDecodeError):
         run_suite(suite=suite, predictions_path=preds)
@@ -467,19 +568,27 @@ def test_suite_with_all_constraint_types(tmp_path: Path) -> None:
     """Suite exercising all constraint types simultaneously."""
     suite_dir = tmp_path / "suite"
     suite_dir.mkdir()
-    (suite_dir / "suite.json").write_text(json.dumps({
-        "schema_version": 1, "name": "all_checks", "description": "",
-        "created_at": "", "checks": {
-            "must_contain": ["hello"],
-            "must_not_contain": ["forbidden"],
-            "regex_must_match": [r"\d+"],
-            "regex_must_not_match": [r"BADPATTERN"],
-            "max_output_chars": 100,
-            "case_insensitive": True,
-            "pii": {"enabled": True},
-            "secrets": {"enabled": True},
-        },
-    }), encoding="utf-8")
+    (suite_dir / "suite.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "name": "all_checks",
+                "description": "",
+                "created_at": "",
+                "checks": {
+                    "must_contain": ["hello"],
+                    "must_not_contain": ["forbidden"],
+                    "regex_must_match": [r"\d+"],
+                    "regex_must_not_match": [r"BADPATTERN"],
+                    "max_output_chars": 100,
+                    "case_insensitive": True,
+                    "pii": {"enabled": True},
+                    "secrets": {"enabled": True},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
     (suite_dir / "cases.jsonl").write_text(
         json.dumps({"id": "c1", "input": "", "tags": ["comprehensive"]}) + "\n",
         encoding="utf-8",
@@ -493,6 +602,7 @@ def test_suite_with_all_constraint_types(tmp_path: Path) -> None:
     )
 
     from toolkit_policy_test_bench.suite import read_suite_dir
+
     suite = read_suite_dir(suite_dir)
     report = run_suite(suite=suite, predictions_path=preds)
 
