@@ -4,9 +4,11 @@ import argparse
 import json
 import logging
 import sys
+import time
 from pathlib import Path
 
 from . import __version__
+from .formatting import format_output
 from .compare import CompareBudget, compare_reports
 from .io import read_bytes, read_json, read_text, write_json, write_text
 from .pack import create_pack, load_suite_from_path, verify_pack
@@ -15,6 +17,22 @@ from .runner import run_suite
 from .signing import generate_ed25519_keypair, sign_bytes, verify_bytes
 
 logger = logging.getLogger(__name__)
+
+
+class _JSONLogFormatter(logging.Formatter):
+    """Emit log records as single-line JSON objects."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        entry = {
+            "ts": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(record.created)),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+        if record.exc_info and record.exc_info[1] is not None:
+            entry["exception"] = self.formatException(record.exc_info)
+        return json.dumps(entry, sort_keys=True)
+
 
 EXIT_SUCCESS = 0
 EXIT_CLI_ERROR = 2
@@ -208,7 +226,8 @@ def _cmd_run(args: argparse.Namespace) -> int:
             logger.error(f"Failed to write report: {e}")
             return EXIT_CLI_ERROR
     
-    print(json.dumps(report.to_dict(), indent=2, sort_keys=True))
+    out_fmt = getattr(args, "format", "json")
+    print(format_output(report.to_dict(), out_fmt))
     return EXIT_SUCCESS
 
 
@@ -249,7 +268,8 @@ def _cmd_compare(args: argparse.Namespace) -> int:
         else:
             logger.warning("Comparison failed")
             
-        print(json.dumps(result, indent=2, sort_keys=True))
+        out_fmt = getattr(args, "format", "json")
+        print(format_output(result, out_fmt))
         return EXIT_SUCCESS if result["passed"] else EXIT_VALIDATION_FAILED
     except Exception as e:
         logger.error(f"Failed to compare reports: {e}")
@@ -297,6 +317,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Enable verbose logging (DEBUG level)",
     )
+    p.add_argument(
+        "--log-format",
+        choices=["text", "json"],
+        default="text",
+        help="Log output format (default: text)",
+    )
     sub = p.add_subparsers(dest="cmd", required=True)
 
     keygen = sub.add_parser("keygen", help="Generate an Ed25519 keypair for signing suite packs.")
@@ -338,11 +364,13 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--suite", required=True, help="Suite path (directory or zip)")
     run.add_argument("--predictions", required=True, help="Predictions JSONL (id+prediction)")
     run.add_argument("--out", default="", help="Optional output report JSON path")
+    run.add_argument("--format", choices=["json", "table"], default="json", help="Output format (default: json)")
     run.set_defaults(func=_cmd_run)
 
     compare = sub.add_parser("compare", help="Compare candidate report against baseline report.")
     compare.add_argument("--baseline", required=True, help="Baseline report JSON file path")
     compare.add_argument("--candidate", required=True, help="Candidate report JSON file path")
+    compare.add_argument("--format", choices=["json", "table"], default="json", help="Output format (default: json)")
     compare.add_argument(
         "--max-fail-rate-increase-pct", default="0.0",
         help="Max fail rate increase %% (default: 0.0)",
@@ -380,12 +408,17 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.WARNING,
-        format="%(asctime)s | %(levelname)-8s | %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        stream=sys.stderr,
-    )
+    log_level = logging.DEBUG if args.verbose else logging.WARNING
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setLevel(log_level)
+    if args.log_format == "json":
+        handler.setFormatter(_JSONLogFormatter())
+    else:
+        handler.setFormatter(logging.Formatter(
+            fmt="%(asctime)s | %(levelname)-8s | %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        ))
+    logging.basicConfig(level=log_level, handlers=[handler])
     
     try:
         return int(args.func(args))

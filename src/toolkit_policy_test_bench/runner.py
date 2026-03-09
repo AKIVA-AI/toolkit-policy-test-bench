@@ -7,6 +7,7 @@ from typing import Any
 
 from .detectors import detect_pii, detect_secrets
 from .json_schema import JSONSchema, parse_json_from_prediction, parse_json_schema, validate_json
+from .plugins import registry as _plugin_registry
 from .report import PolicyReport
 from .suite import PolicySuite
 
@@ -79,12 +80,16 @@ def run_suite(*, suite: PolicySuite, predictions_path: Path) -> PolicyReport:
 
         if enable_pii:
             pii_hits = detect_pii(pred)
+            # Merge custom PII detectors from plugin registry
+            pii_hits.update(_plugin_registry.run_pii(pred))
             pii_total += sum(pii_hits.values())
             if sum(pii_hits.values()) > 0:
                 failures.append("pii_detected")
 
         if enable_secrets:
             secret_hits = detect_secrets(pred)
+            # Merge custom secret detectors from plugin registry
+            secret_hits.update(_plugin_registry.run_secrets(pred))
             secret_total += sum(secret_hits.values())
             if sum(secret_hits.values()) > 0:
                 failures.append("secret_detected")

@@ -85,6 +85,26 @@ def _rm_tree(path: Path) -> None:
     path.rmdir()
 
 
+def _safe_extract(zf: zipfile.ZipFile, target_dir: Path) -> None:
+    """Extract zip members with zip-slip prevention.
+
+    Validates that every extracted path resolves within *target_dir*.
+    Raises ``ValueError`` if a member attempts to escape.
+    """
+    target = target_dir.resolve()
+    for member in zf.infolist():
+        member_path = (target / member.filename).resolve()
+        # Ensure the resolved path is inside the target directory
+        try:
+            member_path.relative_to(target)
+        except ValueError:
+            raise ValueError(
+                f"Zip member escapes target directory: {member.filename}"
+            )
+    # All members validated — now extract
+    zf.extractall(target_dir)
+
+
 def load_suite_from_path(path: Path) -> PolicySuite:
     if path.is_dir():
         return read_suite_dir(path)
@@ -93,6 +113,6 @@ def load_suite_from_path(path: Path) -> PolicySuite:
         _rm_tree(tmp)
         tmp.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(path, "r") as zf:
-            zf.extractall(tmp)
+            _safe_extract(zf, tmp)
         return read_suite_dir(tmp)
     raise ValueError(f"unsupported_suite_path:{path}")

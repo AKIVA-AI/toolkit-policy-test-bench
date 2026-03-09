@@ -19,7 +19,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'
     - run: pip install -e ".[dev]"
-    - run: pytest --cov=toolkit_policy_test_bench --cov-report=xml -v
+    - run: pytest --cov=toolkit_policy_test_bench --cov-report=xml --cov-fail-under=70 -v
     - uses: codecov/codecov-action@v4
       if: matrix.python-version == '3.11'
       with:
@@ -56,4 +56,3 @@ jobs:
     - run: python -m build
     - name: Check package metadata
       run: twine check dist/*
-      continue-on-error: true
