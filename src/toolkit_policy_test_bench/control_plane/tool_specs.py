@@ -10,6 +10,7 @@ to ToolSpec contracts with appropriate permission scope and approval policy.
 'keygen' generates signing keypairs (WORKSPACE_WRITE + REQUIRE_APPROVAL).
 'pack' operates on suite zips -- create/sign write files; inspect/verify are read-only.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -107,8 +108,7 @@ TOOLKIT_TOOL_SPECS: dict[str, ToolkitCommandSpec] = {
         spec=_make_spec(
             name="validate_report",
             description=(
-                "Validate a policy report JSON file against the expected schema. "
-                "Read-only."
+                "Validate a policy report JSON file against the expected schema. Read-only."
             ),
             input_schema={
                 "type": "object",
