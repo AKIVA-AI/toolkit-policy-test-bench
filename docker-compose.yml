@@ -1,5 +1,4 @@
-﻿version: '3.8'
-services:
+﻿services:
   policy-test:
     build: .
     container_name: toolkit-policy-test

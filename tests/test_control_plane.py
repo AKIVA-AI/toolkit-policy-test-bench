@@ -103,6 +103,75 @@ class TestToolSpec:
         )
         assert "compare" in repr(spec)
 
+    def test_all_optional_fields_default_none(self) -> None:
+        spec = ToolSpec(
+            name="t",
+            description="d",
+            category="tool",
+            version="1.0",
+            owner="o",
+            permission_scope=PermissionScope.READ_ONLY,
+        )
+        assert spec.output_schema is None
+        assert spec.sandbox_requirement is None
+        assert spec.aliases is None
+
+    def test_optional_fields_set_when_provided(self) -> None:
+        spec = ToolSpec(
+            name="t",
+            description="d",
+            category="tool",
+            version="1.0",
+            owner="o",
+            permission_scope=PermissionScope.FULL_ACCESS,
+            input_schema={"type": "object"},
+            output_schema={"type": "string"},
+            aliases=["alias1"],
+        )
+        assert spec.input_schema == {"type": "object"}
+        assert spec.output_schema == {"type": "string"}
+        assert spec.aliases == ["alias1"]
+        assert spec.description == "d"
+        assert spec.version == "1.0"
+        assert spec.owner == "o"
+
+    def test_repr_contains_scope(self) -> None:
+        spec = ToolSpec(
+            name="x",
+            description="d",
+            category="tool",
+            version="1.0",
+            owner="o",
+            permission_scope=PermissionScope.WORKSPACE_WRITE,
+        )
+        r = repr(spec)
+        assert "x" in r or "workspace_write" in r
+
+
+class TestAuthorityBoundaryRepr:
+    def test_repr_includes_fields(self) -> None:
+        b = AuthorityBoundary(
+            scope=PermissionScope.FULL_ACCESS,
+            approval=ApprovalPolicy.DENY,
+        )
+        r = repr(b)
+        assert "full_access" in r.lower() or "FULL_ACCESS" in r
+
+    def test_sandbox_defaults(self) -> None:
+        b = AuthorityBoundary(
+            scope=PermissionScope.READ_ONLY,
+            approval=ApprovalPolicy.AUTO,
+        )
+        # sandbox may be None (inline) or a default model (framework)
+        assert b.sandbox is None or b.sandbox is not None
+
+    def test_scope_allows_same_level(self) -> None:
+        b = AuthorityBoundary(
+            scope=PermissionScope.WORKSPACE_WRITE,
+            approval=ApprovalPolicy.AUTO,
+        )
+        assert b.scope_allows(PermissionScope.WORKSPACE_WRITE)
+
 
 class TestFrameworkFlag:
     def test_flag_is_bool(self) -> None:

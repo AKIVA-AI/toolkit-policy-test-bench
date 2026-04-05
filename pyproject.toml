@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "toolkit-policy-test-bench"
-version = "0.1.0"
+version = "0.2.0"
 description = "Policy Test Bench: PII/secret leakage and policy regression tests for LLM outputs."
 readme = "README.md"
 requires-python = ">=3.10"

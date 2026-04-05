@@ -616,3 +616,116 @@ def test_validate_report_invalid_shape(tmp_path: Path) -> None:
 
     rc = main(["validate-report", "--report", str(report)])
     assert rc == EXIT_VALIDATION_FAILED
+
+
+# ============================================================================
+# Run ID tests (G7)
+# ============================================================================
+
+
+def test_run_suite_includes_run_id(tmp_path: Path) -> None:
+    """run_suite should include a UUID run_id in the report summary."""
+    import uuid
+
+    suite_dir = tmp_path / "suite"
+    suite_dir.mkdir()
+    (suite_dir / "suite.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "name": "run-id-test",
+                "description": "test",
+                "created_at": "2026-01-01",
+                "checks": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+    (suite_dir / "cases.jsonl").write_text(
+        json.dumps({"id": "c1", "input": "test", "tags": []}) + "\n",
+        encoding="utf-8",
+    )
+    preds = tmp_path / "preds.jsonl"
+    preds.write_text(
+        json.dumps({"id": "c1", "prediction": "hello"}) + "\n",
+        encoding="utf-8",
+    )
+
+    from toolkit_policy_test_bench.suite import read_suite_dir
+
+    suite = read_suite_dir(suite_dir)
+    report = run_suite(suite=suite, predictions_path=preds)
+
+    assert "run_id" in report.summary
+    # Validate it's a proper UUID
+    uuid.UUID(report.summary["run_id"])
+
+
+# ============================================================================
+# Resource limits tests (G6)
+# ============================================================================
+
+
+def test_read_predictions_rejects_oversized_file(tmp_path: Path) -> None:
+    """_read_predictions should raise ValueError for files exceeding the limit."""
+    from toolkit_policy_test_bench.runner import _read_predictions
+
+    big_file = tmp_path / "big.jsonl"
+    big_file.write_text(
+        json.dumps({"id": "c1", "prediction": "x" * 1000}) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="Predictions file too large"):
+        _read_predictions(big_file, max_bytes=100)
+
+
+def test_read_predictions_allows_within_limit(tmp_path: Path) -> None:
+    """_read_predictions should succeed for files within the limit."""
+    from toolkit_policy_test_bench.runner import _read_predictions
+
+    small_file = tmp_path / "small.jsonl"
+    content = json.dumps({"id": "c1", "prediction": "hello"}) + "\n"
+    small_file.write_text(content, encoding="utf-8")
+
+    result = _read_predictions(small_file, max_bytes=10 * 1024 * 1024)
+    assert result["c1"] == "hello"
+
+
+# ============================================================================
+# ReDoS timeout tests (G5)
+# ============================================================================
+
+
+def test_safe_findall_normal_input() -> None:
+    """_safe_findall should return matches on normal input."""
+    import re
+
+    from toolkit_policy_test_bench.detectors import _safe_findall
+
+    pattern = re.compile(r"\b\d{3}\b")
+    result = _safe_findall(pattern, "abc 123 def 456", timeout=5.0)
+    assert result == ["123", "456"]
+
+
+def test_detect_pii_with_timeout_param() -> None:
+    """detect_pii should accept timeout parameter."""
+    from toolkit_policy_test_bench.detectors import detect_pii
+
+    result = detect_pii("user@example.com", timeout=2.0)
+    assert result["email"] == 1
+
+
+def test_detect_secrets_with_timeout_param() -> None:
+    """detect_secrets should accept timeout parameter."""
+    from toolkit_policy_test_bench.detectors import detect_secrets
+
+    result = detect_secrets("AKIAIOSFODNN7EXAMPLE", timeout=2.0)
+    assert result["aws_access_key"] == 1
+
+
+def test_regex_timeout_error_is_importable() -> None:
+    """RegexTimeoutError should be importable."""
+    from toolkit_policy_test_bench.detectors import RegexTimeoutError
+
+    assert issubclass(RegexTimeoutError, Exception)

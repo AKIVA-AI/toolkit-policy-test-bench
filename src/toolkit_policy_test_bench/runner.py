@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -11,8 +13,20 @@ from .plugins import registry as _plugin_registry
 from .report import PolicyReport
 from .suite import PolicySuite
 
+logger = logging.getLogger(__name__)
 
-def _read_predictions(path: Path) -> dict[str, str]:
+# Maximum prediction file size in bytes (default: 100 MB).
+MAX_PREDICTIONS_FILE_BYTES: int = 100 * 1024 * 1024
+
+
+def _read_predictions(path: Path, max_bytes: int = MAX_PREDICTIONS_FILE_BYTES) -> dict[str, str]:
+    file_size = path.stat().st_size
+    if file_size > max_bytes:
+        raise ValueError(
+            f"Predictions file too large: {file_size:,} bytes "
+            f"(limit: {max_bytes:,} bytes). "
+            f"Split into smaller files or increase MAX_PREDICTIONS_FILE_BYTES."
+        )
     preds: dict[str, str] = {}
     for line in path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
@@ -123,8 +137,12 @@ def run_suite(*, suite: PolicySuite, predictions_path: Path) -> PolicyReport:
         )
         total += 1
 
+    run_id = str(uuid.uuid4())
+    logger.info("Run ID: %s", run_id)
+
     fail_rate = (failed / total) if total else 0.0
     summary = {
+        "run_id": run_id,
         "cases": total,
         "failed_cases": failed,
         "fail_rate": fail_rate,
