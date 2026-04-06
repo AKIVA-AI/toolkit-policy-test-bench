@@ -70,7 +70,7 @@ jobs:
     - run: pip install cyclonedx-bom
     - run: pip install -e ".[dev]"
     - run: cyclonedx-py environment -o sbom.json --output-format json
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: sbom
         path: sbom.json
@@ -85,7 +85,7 @@ jobs:
     - run: pip install pdoc
     - run: pip install -e ".[dev]"
     - run: pdoc toolkit_policy_test_bench -o docs/api/ --docformat google
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: api-docs
         path: docs/api/
