@@ -3,30 +3,8 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ main, develop ]
-    paths:
-      - 'src/**'
-      - 'tests/**'
-      - 'pyproject.toml'
-      - '.github/workflows/ci.yml'
-      - 'Dockerfile'
-      - 'requirements-dev.txt'
-      - 'action.yml'
-      - 'examples/**'
-      - 'schemas/**'
-      - 'docs/report-envelope.md'
   pull_request:
     branches: [ main, develop ]
-    paths:
-      - 'src/**'
-      - 'tests/**'
-      - 'pyproject.toml'
-      - '.github/workflows/ci.yml'
-      - 'Dockerfile'
-      - 'requirements-dev.txt'
-      - 'action.yml'
-      - 'examples/**'
-      - 'schemas/**'
-      - 'docs/report-envelope.md'
 
 jobs:
   test:
@@ -185,3 +163,22 @@ jobs:
         python -m venv "$RUNNER_TEMP/venv"
         "$RUNNER_TEMP/venv/bin/pip" install dist/*.whl
         "$RUNNER_TEMP/venv/bin/toolkit-policy" --help > /dev/null
+
+  all-checks:
+    # The single required status check for main. It fails when any job
+    # above failed or was cancelled; a skipped job counts as passing.
+    if: always()
+    needs: [test, extras, action, security, lint, sbom, docs, build]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Verify every job passed
+      env:
+        RESULTS: ${{ join(needs.*.result, ' ') }}
+      run: |
+        echo "Job results: $RESULTS"
+        for result in $RESULTS; do
+          case "$result" in
+            success|skipped) ;;
+            *) echo "A required job ended with: $result"; exit 1 ;;
+          esac
+        done
