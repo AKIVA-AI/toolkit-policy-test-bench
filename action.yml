@@ -1,0 +1,172 @@
+name: "Toolkit Policy Test Bench"
+description: "Gate LLM outputs and garak / promptfoo / PyRIT results, and file them as control evidence (OWASP LLM, NIST AI RMF, EU AI Act)."
+author: "AKIVA AI, LLC"
+branding:
+  icon: "shield"
+  color: "blue"
+
+inputs:
+  command:
+    description: "run (score predictions against a suite), import (garak/promptfoo/PyRIT results) or evidence (per-control summary)."
+    required: false
+    default: "run"
+  suite:
+    description: "run: suite directory or .zip pack."
+    required: false
+    default: ""
+  predictions:
+    description: "run: predictions JSONL."
+    required: false
+    default: ""
+  patterns:
+    description: "run: custom detector pattern files, one per line."
+    required: false
+    default: ""
+  signature:
+    description: "run: detached pack signature JSON (with public-key)."
+    required: false
+    default: ""
+  public-key:
+    description: "run: Ed25519 public key PEM for signature."
+    required: false
+    default: ""
+  source:
+    description: "import: garak, promptfoo or pyrit."
+    required: false
+    default: ""
+  input:
+    description: "import: the tool's result file."
+    required: false
+    default: ""
+  reports:
+    description: "evidence: report envelopes, one per line."
+    required: false
+    default: ""
+  max-failures:
+    description: "import / evidence: failed plus unjudged results allowed before the gate fails."
+    required: false
+    default: "0"
+  out:
+    description: "Where to write the report envelope."
+    required: false
+    default: "policy-report.json"
+  extras:
+    description: "Optional extras to install, e.g. 'signing' or 'presidio,judge'."
+    required: false
+    default: ""
+  python-version:
+    description: "Python version to set up."
+    required: false
+    default: "3.12"
+  fail-on-violation:
+    description: "Fail the step when the verdict is not pass. Set to 'false' to only report."
+    required: false
+    default: "true"
+
+outputs:
+  report:
+    description: "Path of the report envelope."
+    value: ${{ steps.bench.outputs.report }}
+  verdict:
+    description: "pass, fail or error."
+    value: ${{ steps.bench.outputs.verdict }}
+  exit-code:
+    description: "The CLI exit code (0 pass, 4 fail, 2/3 error)."
+    value: ${{ steps.bench.outputs.exit-code }}
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-python@v7
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install toolkit-policy-test-bench
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        EXTRAS: ${{ inputs.extras }}
+      run: |
+        set -euo pipefail
+        spec="$ACTION_PATH"
+        if [ -n "$EXTRAS" ]; then spec="$ACTION_PATH[$EXTRAS]"; fi
+        python -m pip install --disable-pip-version-check -q "$spec"
+
+    - name: Run toolkit-policy
+      id: bench
+      shell: bash
+      env:
+        CMD: ${{ inputs.command }}
+        SUITE: ${{ inputs.suite }}
+        PREDICTIONS: ${{ inputs.predictions }}
+        PATTERNS: ${{ inputs.patterns }}
+        SIGNATURE: ${{ inputs.signature }}
+        PUBLIC_KEY: ${{ inputs.public-key }}
+        SOURCE: ${{ inputs.source }}
+        INPUT_FILE: ${{ inputs.input }}
+        REPORTS: ${{ inputs.reports }}
+        MAX_FAILURES: ${{ inputs.max-failures }}
+        OUT: ${{ inputs.out }}
+      run: |
+        # GitHub runs bash with -e; the CLI exit code is captured, not fatal.
+        set +e -uo pipefail
+        args=()
+        case "$CMD" in
+          run)
+            args=(run --suite "$SUITE" --predictions "$PREDICTIONS" --out "$OUT")
+            while IFS= read -r p; do [ -n "$p" ] && args+=(--patterns "$p"); done <<< "$PATTERNS"
+            if [ -n "$SIGNATURE" ]; then args+=(--signature "$SIGNATURE" --public-key "$PUBLIC_KEY"); fi
+            ;;
+          import)
+            args=(import --source "$SOURCE" --input "$INPUT_FILE" --out "$OUT" --max-failures "$MAX_FAILURES")
+            ;;
+          evidence)
+            args=(evidence --out "$OUT" --max-failures "$MAX_FAILURES")
+            while IFS= read -r r; do [ -n "$r" ] && args+=(--report "$r"); done <<< "$REPORTS"
+            ;;
+          *)
+            echo "::error::unknown command '$CMD' (expected run, import or evidence)"
+            exit 2
+            ;;
+        esac
+
+        if [ "$CMD" = "evidence" ]; then
+          toolkit-policy "${args[@]}" --format markdown > "$RUNNER_TEMP/policy-summary.md"
+        else
+          toolkit-policy "${args[@]}" --format table > "$RUNNER_TEMP/policy-summary.txt"
+        fi
+        code=$?
+
+        verdict="error"
+        if [ -f "$OUT" ]; then
+          verdict=$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["predicate"]["verdict"])' "$OUT" 2>/dev/null || echo error)
+        fi
+        {
+          echo "report=$OUT"
+          echo "verdict=$verdict"
+          echo "exit-code=$code"
+        } >> "$GITHUB_OUTPUT"
+
+        {
+          echo "### toolkit-policy $CMD: $verdict (exit $code)"
+          echo
+          if [ -f "$RUNNER_TEMP/policy-summary.md" ]; then
+            cat "$RUNNER_TEMP/policy-summary.md"
+          elif [ -f "$RUNNER_TEMP/policy-summary.txt" ]; then
+            echo '```'
+            cat "$RUNNER_TEMP/policy-summary.txt"
+            echo '```'
+          fi
+        } >> "$GITHUB_STEP_SUMMARY"
+        exit 0
+
+    - name: Enforce verdict
+      if: ${{ inputs.fail-on-violation == 'true' && steps.bench.outputs.verdict != 'pass' }}
+      shell: bash
+      env:
+        VERDICT: ${{ steps.bench.outputs.verdict }}
+        CODE: ${{ steps.bench.outputs.exit-code }}
+      run: |
+        echo "::error::toolkit-policy verdict is $VERDICT (exit $CODE)"
+        if [ -z "$CODE" ] || [ "$CODE" = "0" ]; then CODE=1; fi
+        exit "$CODE"

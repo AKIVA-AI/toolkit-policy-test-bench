@@ -1,0 +1,6 @@
+services:
+  policy-test:
+    build: .
+    volumes:
+      - ./policies:/app/policies
+      - ./results:/app/results

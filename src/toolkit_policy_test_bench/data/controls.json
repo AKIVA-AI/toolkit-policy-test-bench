@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "disclaimer": "Maps finding categories to framework controls so test results can be filed as evidence. A mapping says a test exercises a control; it does not say the control is met, and it is not legal advice. Review and adapt it to your own risk assessment.",
+  "frameworks": {
+    "owasp-llm-2025": {
+      "title": "OWASP Top 10 for LLM Applications 2025",
+      "source": "https://genai.owasp.org/llm-top-10/",
+      "controls": {
+        "LLM01:2025": {"name": "Prompt Injection", "url": "https://genai.owasp.org/llmrisk/llm01-prompt-injection/"},
+        "LLM02:2025": {"name": "Sensitive Information Disclosure", "url": "https://genai.owasp.org/llmrisk/llm022025-sensitive-information-disclosure/"},
+        "LLM03:2025": {"name": "Supply Chain", "url": "https://genai.owasp.org/llmrisk/llm032025-supply-chain/"},
+        "LLM05:2025": {"name": "Improper Output Handling", "url": "https://genai.owasp.org/llmrisk/llm052025-improper-output-handling/"},
+        "LLM06:2025": {"name": "Excessive Agency", "url": "https://genai.owasp.org/llmrisk/llm062025-excessive-agency/"},
+        "LLM07:2025": {"name": "System Prompt Leakage", "url": "https://genai.owasp.org/llmrisk/llm072025-system-prompt-leakage/"},
+        "LLM09:2025": {"name": "Misinformation", "url": "https://genai.owasp.org/llmrisk/llm092025-misinformation/"},
+        "LLM10:2025": {"name": "Unbounded Consumption", "url": "https://genai.owasp.org/llmrisk/llm102025-unbounded-consumption/"}
+      },
+      "not_covered": {
+        "LLM04:2025": "Data and Model Poisoning: a training-time risk; output testing does not exercise it.",
+        "LLM08:2025": "Vector and Embedding Weaknesses: needs retrieval-layer tests, not output tests."
+      }
+    },
+    "nist-ai-rmf": {
+      "title": "NIST AI Risk Management Framework 1.0 (NIST AI 100-1), MEASURE function",
+      "source": "https://doi.org/10.6028/NIST.AI.100-1 (subcategory text: https://airc.nist.gov/airmf-resources/playbook/measure/)",
+      "controls": {
+        "MEASURE 2.3": {"name": "AI system performance or assurance criteria are measured and demonstrated for conditions similar to deployment"},
+        "MEASURE 2.5": {"name": "The AI system to be deployed is demonstrated to be valid and reliable"},
+        "MEASURE 2.6": {"name": "AI system is evaluated regularly for safety risks"},
+        "MEASURE 2.7": {"name": "AI system security and resilience are evaluated and documented"},
+        "MEASURE 2.10": {"name": "Privacy risk of the AI system is examined and documented"},
+        "MEASURE 2.11": {"name": "Fairness and bias are evaluated and results are documented"}
+      }
+    },
+    "nist-ai-600-1": {
+      "title": "NIST AI 600-1, Artificial Intelligence Risk Management Framework: Generative Artificial Intelligence Profile (2024), GAI risks",
+      "source": "https://doi.org/10.6028/NIST.AI.600-1",
+      "controls": {
+        "Confabulation": {"name": "Confabulation"},
+        "Dangerous, Violent, or Hateful Content": {"name": "Dangerous, Violent, or Hateful Content"},
+        "Data Privacy": {"name": "Data Privacy"},
+        "Harmful Bias and Homogenization": {"name": "Harmful Bias and Homogenization"},
+        "Information Integrity": {"name": "Information Integrity"},
+        "Information Security": {"name": "Information Security"},
+        "Intellectual Property": {"name": "Intellectual Property"},
+        "Obscene, Degrading, and/or Abusive Content": {"name": "Obscene, Degrading, and/or Abusive Content"},
+        "Value Chain and Component Integration": {"name": "Value Chain and Component Integration"}
+      }
+    },
+    "eu-ai-act": {
+      "title": "Regulation (EU) 2024/1689 (Artificial Intelligence Act)",
+      "source": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj",
+      "controls": {
+        "Art. 15(1)": {"name": "High-risk AI systems: appropriate level of accuracy, robustness and cybersecurity", "url": "https://artificialintelligenceact.eu/article/15/"},
+        "Art. 15(5)": {"name": "High-risk AI systems: resilience against attempts by unauthorised third parties to alter their use, outputs or performance by exploiting system vulnerabilities", "url": "https://artificialintelligenceact.eu/article/15/"},
+        "Art. 55(1)(a)": {"name": "General-purpose AI models with systemic risk: model evaluation including conducting and documenting adversarial testing", "url": "https://artificialintelligenceact.eu/article/55/"}
+      }
+    }
+  },
+  "category_controls": {
+    "prompt_injection": {
+      "owasp-llm-2025": ["LLM01:2025"],
+      "nist-ai-rmf": ["MEASURE 2.7"],
+      "nist-ai-600-1": ["Information Security"],
+      "eu-ai-act": ["Art. 15(5)", "Art. 55(1)(a)"]
+    },
+    "jailbreak": {
+      "owasp-llm-2025": ["LLM01:2025"],
+      "nist-ai-rmf": ["MEASURE 2.6", "MEASURE 2.7"],
+      "nist-ai-600-1": ["Information Security", "Dangerous, Violent, or Hateful Content"],
+      "eu-ai-act": ["Art. 15(5)", "Art. 55(1)(a)"]
+    },
+    "system_prompt_leakage": {
+      "owasp-llm-2025": ["LLM07:2025"],
+      "nist-ai-rmf": ["MEASURE 2.7"],
+      "nist-ai-600-1": ["Information Security"],
+      "eu-ai-act": ["Art. 15(5)"]
+    },
+    "pii_leakage": {
+      "owasp-llm-2025": ["LLM02:2025"],
+      "nist-ai-rmf": ["MEASURE 2.10"],
+      "nist-ai-600-1": ["Data Privacy"],
+      "eu-ai-act": ["Art. 15(5)"]
+    },
+    "secret_leakage": {
+      "owasp-llm-2025": ["LLM02:2025"],
+      "nist-ai-rmf": ["MEASURE 2.7"],
+      "nist-ai-600-1": ["Information Security"],
+      "eu-ai-act": ["Art. 15(5)"]
+    },
+    "training_data_leakage": {
+      "owasp-llm-2025": ["LLM02:2025"],
+      "nist-ai-rmf": ["MEASURE 2.10"],
+      "nist-ai-600-1": ["Data Privacy", "Intellectual Property"],
+      "eu-ai-act": ["Art. 15(5)"]
+    },
+    "harmful_content": {
+      "nist-ai-rmf": ["MEASURE 2.6"],
+      "nist-ai-600-1": ["Dangerous, Violent, or Hateful Content", "Obscene, Degrading, and/or Abusive Content"],
+      "eu-ai-act": ["Art. 55(1)(a)"]
+    },
+    "bias": {
+      "nist-ai-rmf": ["MEASURE 2.11"],
+      "nist-ai-600-1": ["Harmful Bias and Homogenization"]
+    },
+    "misinformation": {
+      "owasp-llm-2025": ["LLM09:2025"],
+      "nist-ai-rmf": ["MEASURE 2.5"],
+      "nist-ai-600-1": ["Confabulation", "Information Integrity"],
+      "eu-ai-act": ["Art. 15(1)"]
+    },
+    "improper_output_handling": {
+      "owasp-llm-2025": ["LLM05:2025"],
+      "nist-ai-rmf": ["MEASURE 2.7"],
+      "nist-ai-600-1": ["Information Security"],
+      "eu-ai-act": ["Art. 15(5)"]
+    },
+    "excessive_agency": {
+      "owasp-llm-2025": ["LLM06:2025"],
+      "nist-ai-rmf": ["MEASURE 2.7"],
+      "nist-ai-600-1": ["Information Security"],
+      "eu-ai-act": ["Art. 15(5)"]
+    },
+    "supply_chain": {
+      "owasp-llm-2025": ["LLM03:2025"],
+      "nist-ai-rmf": ["MEASURE 2.7"],
+      "nist-ai-600-1": ["Value Chain and Component Integration"],
+      "eu-ai-act": ["Art. 15(5)"]
+    },
+    "unbounded_consumption": {
+      "owasp-llm-2025": ["LLM10:2025"],
+      "nist-ai-rmf": ["MEASURE 2.7"],
+      "nist-ai-600-1": ["Information Security"],
+      "eu-ai-act": ["Art. 15(1)"]
+    },
+    "intellectual_property": {
+      "nist-ai-600-1": ["Intellectual Property"]
+    },
+    "policy_violation": {
+      "nist-ai-rmf": ["MEASURE 2.3"]
+    }
+  }
+}
