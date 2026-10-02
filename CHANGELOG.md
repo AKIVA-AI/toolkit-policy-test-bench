@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0] - 2026-09-26
 
+First release on PyPI (published 2026-10-02): `pip install toolkit-policy-test-bench`.
+
 Toolkit Policy Test Bench becomes an LLM safety and compliance evidence tool: score
 outputs, import garak / promptfoo / PyRIT results, map them to controls, and gate CI.
 

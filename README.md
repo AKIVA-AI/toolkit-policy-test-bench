@@ -1,5 +1,7 @@
 # Toolkit Policy Test Bench
 
+[![PyPI](https://img.shields.io/pypi/v/toolkit-policy-test-bench.svg)](https://pypi.org/project/toolkit-policy-test-bench/)
+[![Python versions](https://img.shields.io/pypi/pyversions/toolkit-policy-test-bench.svg)](https://pypi.org/project/toolkit-policy-test-bench/)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 **LLM safety and compliance evidence.** A Python CLI, library and GitHub Action that
@@ -20,10 +22,12 @@ harness, or run garak, promptfoo or PyRIT, then bring the results here.
 
 ## 5-minute example
 
+Run it from the root of a clone of this repository, which holds the example files:
+
 ```bash
+pip install toolkit-policy-test-bench
 git clone https://github.com/AKIVA-AI/toolkit-policy-test-bench.git
 cd toolkit-policy-test-bench
-pip install -e .
 
 # 1. Score a support bot's replies against its policy suite.
 toolkit-policy run --suite examples/support-bot/suite \
@@ -50,13 +54,13 @@ toolkit-policy evidence --report run.json --report garak.json \
 ## GitHub Action
 
 ```yaml
-- uses: AKIVA-AI/toolkit-policy-test-bench@main   # pin a release tag or commit SHA
+- uses: AKIVA-AI/toolkit-policy-test-bench@v1.0.0
   with:
     suite: policies/suite            # or a signed .zip pack (signature, public-key)
     predictions: outputs/preds.jsonl
     out: policy-report.json
 
-- uses: AKIVA-AI/toolkit-policy-test-bench@main
+- uses: AKIVA-AI/toolkit-policy-test-bench@v1.0.0
   with:
     command: import                  # or: evidence (reports: one path per line)
     source: promptfoo
@@ -69,7 +73,7 @@ Inputs: `command` (`run`, `import`, `evidence`), `suite`, `predictions`, `patter
 `extras` (for example `presidio`), `python-version`, `fail-on-violation` (default
 `true`). Outputs: `report`, `verdict`, `exit-code`. The step writes a summary (a
 markdown evidence table for `evidence`) to the job summary. The action installs the
-package from the action's own checkout, so it needs no PyPI release.
+package from the action's own checkout.
 
 ## Status
 
@@ -96,7 +100,7 @@ package from the action's own checkout, so it needs no PyPI release.
 | Finding categories | Working | Data file `data/categories.json`; override with `--categories` |
 | Attack generation or model invocation | Not provided | Run garak, promptfoo or PyRIT, then import their results |
 | GitHub Action | Working | `action.yml`; tested in CI on the bundled example |
-| PyPI package | Planned | Not published yet; install from source. The release workflow is ready and waits on the one-time PyPI setup in [RELEASING.md](RELEASING.md). |
+| PyPI package | Working | `pip install toolkit-policy-test-bench`; see [Install](#install) |
 
 ### Detector coverage
 
@@ -134,7 +138,7 @@ birth are not detected. Use the Presidio engine below for those.
 ### Presidio PII engine (optional)
 
 ```bash
-pip install -e ".[presidio]"
+pip install "toolkit-policy-test-bench[presidio]"
 python -m spacy download en_core_web_lg   # or en_core_web_sm, lighter
 ```
 
@@ -156,18 +160,17 @@ python -m spacy download en_core_web_lg   # or en_core_web_sm, lighter
 
 ## Install
 
-Not on PyPI yet (the release workflow is ready; publishing is pending). Install from
-source (Python 3.10+):
+Requires Python 3.10+.
 
 ```bash
-git clone https://github.com/AKIVA-AI/toolkit-policy-test-bench.git
-cd toolkit-policy-test-bench
-pip install -e .              # runtime (depends on `regex`)
-pip install -e ".[signing]"   # adds Ed25519 signing (`cryptography`)
-pip install -e ".[presidio]"  # Presidio PII engine (plus a spaCy model)
-pip install -e ".[judge]"     # LiteLLM refusal judge
-pip install -e ".[dev]"       # tests, lint and type-check tools
+pip install toolkit-policy-test-bench                # runtime (depends on `regex`)
+pip install "toolkit-policy-test-bench[signing]"     # adds Ed25519 signing (`cryptography`)
+pip install "toolkit-policy-test-bench[presidio]"    # Presidio PII engine (plus a spaCy model)
+pip install "toolkit-policy-test-bench[judge]"       # LiteLLM refusal judge
+toolkit-policy --help
 ```
+
+To work on the code, see [Development](#development).
 
 ## Writing a suite
 
@@ -280,8 +283,10 @@ To sign a report, use any in-toto/DSSE tool. The optional companion
 [toolkit-ml-provenance](https://github.com/AKIVA-AI/toolkit-ml-provenance) provides:
 
 ```bash
-toolkit-mlsbom sign-file report.json      # Ed25519 key, or Sigstore keyless
-toolkit-mlsbom verify-file report.json
+pip install "toolkit-ml-provenance[signing]"
+toolkit-mlsbom keygen --private-key signing.pem --public-key signing.pub
+toolkit-mlsbom sign-file report.json --key signing.pem   # or --sigstore, with its [sigstore] extra
+toolkit-mlsbom verify-file report.json --public-key signing.pub
 ```
 
 ## Suite checks
@@ -342,7 +347,7 @@ paraphrased refusals and can be fooled by a reply that apologises and then compl
 ### LLM refusal judge (optional, off by default)
 
 ```bash
-pip install -e ".[judge]"
+pip install "toolkit-policy-test-bench[judge]"
 export OPENAI_API_KEY=...        # or the variables your provider needs
 toolkit-policy run --suite mysuite --predictions preds.jsonl --out report.json \
   --refusal-judge gpt-4o-mini    # any LiteLLM model string, e.g. ollama/llama3.1
@@ -639,7 +644,11 @@ The image installs the package with the signing extra and runs as a non-root use
 
 ## Development
 
+Install from source in editable mode, with the test, lint and type-check tools:
+
 ```bash
+git clone https://github.com/AKIVA-AI/toolkit-policy-test-bench.git
+cd toolkit-policy-test-bench
 pip install -e ".[dev]"
 pytest -q
 ruff check . && ruff format --check .
