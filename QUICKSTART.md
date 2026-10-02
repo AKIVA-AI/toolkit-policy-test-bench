@@ -1,11 +1,9 @@
 # Quick Start
 
-Install from source (not on PyPI yet):
+Install from PyPI:
 
 ```bash
-git clone https://github.com/AKIVA-AI/toolkit-policy-test-bench.git
-cd toolkit-policy-test-bench
-pip install -e ".[signing]"
+pip install "toolkit-policy-test-bench[signing]"
 toolkit-policy --version
 ```
 

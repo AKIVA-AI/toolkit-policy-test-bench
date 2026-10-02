@@ -2,16 +2,16 @@
 
 ## CI
 
-Install from source in the job, then run the suite. `run` fails the step when a case
+Install from PyPI in the job, then run the suite. `run` fails the step when a case
 fails; see the README "CI example" for a baseline-comparison variant.
 
 ```yaml
-- run: pip install "git+https://github.com/AKIVA-AI/toolkit-policy-test-bench.git"
+- run: pip install toolkit-policy-test-bench
 - run: toolkit-policy run --suite packs/policy.zip --predictions preds.jsonl --out report.json
 ```
 
 For signed packs, add `--signature <sig.json> --public-key <pub.pem>` to `run` and
-install the signing extra (`pip install "toolkit-policy-test-bench[signing] @ git+https://github.com/AKIVA-AI/toolkit-policy-test-bench.git"`).
+install the signing extra (`pip install "toolkit-policy-test-bench[signing]"`).
 
 In GitHub Actions you can use the bundled action instead; see the README "GitHub
 Action" section.
